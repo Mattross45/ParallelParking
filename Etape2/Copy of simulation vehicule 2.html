@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.4/angular.min.js"></script>
+
+<script type="text/javascript" src="Copy of calcul.js"></script>
+</head>
+
+<body  ng-app="VehiculeSimulationApp" ng-init="angle_vehicule=0" >
+
+<div ng-controller="VehiculeSimulationCtrl">
+
+    <p>Angle Roue            : <input type="number" ng-model="angle_roue"></p>
+    <p>Pas de temps          : <input type="number" ng-model="dt"></p>
+    <p>Vitesse               : <input type="number" ng-model="s"></p>
+    <p>Rayon De Bracage      : <input type="number" ng-model="R"></p>
+    <p>Rayon De Bracage Min  : <input type="number" ng-model="Rmin"></p>
+    <p><bold ng-show="R1>R2" style="color:red">Collision</bold>R1  : <input type="number" ng-model="R1">R2  : <input type="number" ng-model="R2"></p>
+    <p>(d) espace avec le véhicule à coté  : <input type="number" ng-model="d"></p>
+    <p>(e) espace avec le véhicule devant    : <input type="number" ng-model="e"></p>
+    <p> E ajusté   : <input type="number" ng-model="eajuste"></p>
+    <p> E best(collision)   : <input type="number" ng-model="bestE"></p>
+
+    <button ng-click="refresh()">refresh !</button>
+    <button ng-click="step()">Step !</button>
+    <button ng-click="seGarerAutomatiquement()">Auto !</button>
+
+    <table border="1">
+        <tr><td>xr</td><td>yr</td><td>Tr</td></tr>
+        <tr><td>{{xr | number :3}}</td><td>{{yr| number :3}}</td><td>{{Tr*rad2deg| number :3}}</td></tr>
+        <tr><td>xv</td><td>yv</td><td>Tv</td></tr>
+        <tr><td>{{xv| number :3}}</td><td>{{yv| number :3}}</td><td>{{Tv*rad2deg| number :3}}</td></tr>
+    </table>
+  <h4 >Dessin</h4>
+<svg width="500" height="800" viewBox="0 0 2000 5000">
+
+    <g  transform="translate(0,1000)">
+    <!-- Vehicule dérrière lequel on se gare   -->
+    <g transform="translate({{xg1}},{{yg1}}) rotate({{rad2deg * Tg1 }})">
+        <g id="vehicule_garé_1">
+                <rect x="-{{porteAFauxArriere}}" y="{{-largeurVehicule/2.0}}" width="{{longueurVehicule}}" height="{{largeurVehicule}}" fill="green"></rect>
+                <line x1="0" y1="{{ESroues/2}}" x2="0" y2="{{-ESroues/2}}" stroke-width="2" stroke="black"></line>
+                <line x1="0" y1="0" x2="{{Lveh}}" y2="0" stroke-width="2" stroke="black"></line>
+                <line x1="{{Lveh}}" y1="{{ESroues/2}}" x2="{{Lveh}}" y2="{{-ESroues/2}}" stroke-width="2" stroke="black"></line>
+        </g>
+    </g>
+        <g transform="translate({{xg2}},{{yg2}}) rotate({{rad2deg * Tg2 }})">
+        <g id="vehicule_garé_2">
+                <rect x="-{{porteAFauxArriere}}" y="{{-largeurVehicule/2.0}}" width="{{longueurVehicule}}" height="{{largeurVehicule}}" fill="green"></rect>
+                <line x1="0" y1="{{ESroues/2}}" x2="0" y2="{{-ESroues/2}}" stroke-width="2" stroke="black"></line>
+                <line x1="0" y1="0" x2="{{Lveh}}" y2="0" stroke-width="2" stroke="black"></line>
+                <line x1="{{Lveh}}" y1="{{ESroues/2}}" x2="{{Lveh}}" y2="{{-ESroues/2}}" stroke-width="2" stroke="black"></line>
+        </g>
+    </g>
+    <!-- Dpv = 100 -->
+    <!-- le vehicule -->
+    <g id="vehicule" transform=" translate({{xv}},{{yv}})">
+        <g transform="rotate({{rad2deg * Tv}},0,0)">
+            <g >
+                <!-- cercle du rayon de bracage pour visualisation en pointillé-->
+                <circle cx="0" cy="{{R}}" r="{{R>0?R:-R}}" stroke-width="1" stroke="black" fill="transparent" troke-dasharray="50,100,50"></circle>
+                
+                <rect x="-{{porteAFauxArriere}}" y="{{-largeurVehicule/2.0}}" width="{{longueurVehicule}}" height="{{largeurVehicule}}" fill="yellow"></rect>
+                <line x1="0" y1="{{ESroues/2}}" x2="0" y2="{{-ESroues/2}}" stroke-width="2" stroke="black"></line>
+                <line x1="{{-Dpv}}" y1="0" x2="{{Lveh}}" y2="0" stroke-width="2" stroke="black"></line>
+                <circle cx="{{-Dpv}}" cy="0" r="10" stroke-width="2" stroke="black" fill="transparent"></circle>
+                <g id="roue avt" transform="translate({{Lveh}}, 0) rotate({{angle_roue}})">
+                    <line x1="0" y1="{{ESroues/2}}" x2="0" y2="{{-ESroues/2}}" stroke-width="2" stroke="black"></line>
+                </g>
+            </g>
+        </g>
+    </g>
+       <!-- le point d'inflexion visé-->
+       <circle cx="{{inflexionPointX}}" cy="{{inflexionPointY}}" r="10" stroke-width="2" stroke="red" fill="transparent"></circle>
+ <!-- les centres de rotation véhicule-->
+ <circle cx="{{centreRotation1[0]}}" cy="{{centreRotation1[1]}}" r="10" stroke-width="2" stroke="red" fill="transparent"></circle>
+ <circle cx="{{centreRotation2[0]}}" cy="{{centreRotation2[1]}}" r="10" stroke-width="2" stroke="red" fill="transparent"></circle>
+
+ <circle cx="{{centreRotation2[0]}}" cy="{{centreRotation2[1]}}" r="{{R1}}" stroke-width="2" stroke="green" fill="transparent"></circle>
+ <circle cx="{{centreRotation2[0]}}" cy="{{centreRotation2[1]}}" r="{{R2}}" stroke-width="2" stroke="blue" fill="transparent"></circle>
+
+       <!-- le point de collision -->
+       <circle cx="{{pointCollision1[0]}}" cy="{{pointCollision1[1]}}" r="20" stroke-width="2" stroke="red" fill="transparent"></circle>
+       <circle cx="{{pointCollision2[0]}}" cy="{{pointCollision2[1]}}" r="20" stroke-width="2" stroke="red" fill="transparent"></circle>
+       <line x1="{{pointCollision1[0]}}" y1="{{pointCollision1[1]}}" x2="{{pointCollision2[0]}}" y2="{{pointCollision2[1]}}" stroke-width="2" stroke="black"></line>
+              
+    <!-- la remorque -->
+   <!-- <g id="remorque" transform=" translate({{xr}},{{yr}})">
+        <g transform="rotate({{rad2deg * Tr}},0,0)">
+            <g >
+                <rect x="-50" y="-100" width="400" height="200" fill="yellow"></rect>
+                <line x1="0" y1="75" x2="0" y2="-75" stroke-width="2" stroke="black"></line>
+                <line x1="0" y1="0" x2="400" y2="0" stroke-width="2" stroke="black"></line>
+                <circle cx="400" cy="0" r="10" stroke-width="2" stroke="black" fill="transparent"></circle>
+            </g>
+        </g>
+    </g>
+-->
+</g>
+</svg>
+</div>
+
+</body>
+</html>
